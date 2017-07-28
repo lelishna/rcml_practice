@@ -1,0 +1,429 @@
+define SYS_ARRAY "SYS_ARRAY"
+define TASKS_ARRAY "TASKS_ARRAY"
+define ROBOTS_ARRAY "ROBOTS_ARRAY"
+define FLAGS_ARRAY "FLAGS_ARRAY"
+
+define M_1 "M_1"
+define M_2 "M_2"
+define M_3 "M_3"
+
+define SYS_EXIT 0
+
+define FLAG_1 0
+define FLAG_2 1
+
+define ROBOT_ID 0
+define STAN_1_ID 1
+define STAN_2_ID 2
+define METER_ID 3
+
+define TASK_ID_DO 0
+
+define PALLET 0
+define PALLET_X 850
+define PALLET_Y -1500
+define PALLET_Z 1000
+
+define CHECK 2500
+define CHECK_X 4000
+define CHECK_Y -1100
+define CHECK_Z 1300
+
+define BATH 7200
+define BATH_X 8000
+define BATH_Y -1500
+define BATH_Z 600
+
+define CHANGE 1200
+
+define STAN_1 3500
+define STAN_1_X 5000
+define STAN_1_Y 1200
+define STAN_1_Z 1400
+
+define STAN_2 8200
+define STAN_2_X 9000
+define STAN_2_Y 1200
+define STAN_2_Z 1100
+
+define METER 500
+define METER_X 2100
+define METER_Y 700
+define METER_Z 1200
+
+function robot_robodk::defPos(value) {
+	
+	robot->SetJointPos(1, 0);
+	robot->SetJointPos(2, -90);
+	robot->SetJointPos(3, 90);
+	robot->SetJointPos(4, 0);
+	robot->SetJointPos(5, 60);
+	robot->SetJointPos(6, 90);
+
+	robot->MoveToJoints();
+	
+ 	if (value == 1) { 
+		robot->MoveToJoint(7, 0);
+	}
+}
+
+function IsExit(){
+	return array.get(SYS_ARRAY, SYS_EXIT);
+}
+
+function SetExit(value){
+	array.set(SYS_ARRAY, SYS_EXIT, value);
+	if(value == 1){
+		dashboard.SetNoTaskWait("", 1);
+	}
+	robot_robodk->defPos(1);
+}
+
+function Init() {
+	
+	array.create(SYS_ARRAY, 5);	
+	array.create(TASKS_ARRAY, 5);	
+	array.create(ROBOTS_ARRAY, 4);
+	array.create(FLAGS_ARRAY, 2);
+	
+	array.set(SYS_ARRAY,SYS_EXIT, 0);
+	array.set(FLAGS_ARRAY,FLAG_1, 1);
+	array.set(FLAGS_ARRAY,FLAG_2, 1);
+	
+	@S1 = robot_robodk_stan_1;
+	@S2 = robot_robodk_stan_2;
+	@S3 = robot_robodk_stan_3;
+	
+	@S1->SetColor(255/255, 255/255, 0/255, 1);
+	@S2->SetColor(0/255, 255/255, 255/255, 1);
+	@S3->SetColor(0/255, 255/255, 0/255, 1);
+}
+
+function robot_robodk::GetDetail() {
+	
+	robot->MoveToJoint(7, PALLET); 
+	robot->MoveTo(PALLET_X, PALLET_Y, PALLET_Z, 180, 0, -180); 
+	robot->MoveTo(PALLET_X, PALLET_Y, PALLET_Z-700, 180, 0, -180); //взять деталь
+	system.sleep(1000);
+	robot->MoveTo(PALLET_X, PALLET_Y, PALLET_Z, 180, 0, -180); 
+	
+	robot->defPos(0);
+	
+}
+
+function robot_robodk::Change(value) { 
+	
+	robot->MoveToJoint(7, CHANGE);
+	
+	robot->MoveTo(2000, -1300, 1000, 180, 0, -180); 
+	
+	if (value == 0) {
+		robot->MoveTo(2100, -1300, 750, 0, -90, 0);
+		system.sleep(1000);
+		robot->MoveTo(2000, -1300, 1000, 180, 0, -180); 
+	}
+	
+	robot->MoveTo(2100, -1300, 1000, 180, 0, 90); 
+	robot->MoveTo(2100, -1300, 750, 180, 0, 90); 
+	system.sleep(1000);
+	robot->MoveTo(2100, -1300, 1000, 180, 0, 90); 
+	robot->MoveTo(2000, -1300, 1000, 180, 0, -180);
+	
+	if (value == 1) { 	// взять за другой край
+		robot->MoveTo(1950, -1300, 1000, -180, 0, -90); 
+		robot->MoveTo(1950, -1300, 750, -180, 0, -90); 
+		system.sleep(1000);
+		robot->MoveTo(1950, -1300, 1000, -180, 0, -90); 
+		robot->MoveTo(2000, -1300, 1000, 180, 0, -180);
+	}
+	
+	robot->defPos(0);
+	
+}
+
+function robot_robodk::CheckCode() { 
+	
+	robot->MoveToJoint(7, CHECK);
+	robot->MoveTo(CHECK_X, CHECK_Y, CHECK_Z, -90, 0, 180);
+	robot->MoveTo(CHECK_X, CHECK_Y-400, CHECK_Z, -90, 0, 180);
+	system.sleep(3000);
+	robot->MoveTo(CHECK_X, CHECK_Y, CHECK_Z, -90, 0, 180);
+	robot->defPos(0);
+	
+}
+
+function robot_robodk::TakeBath() { 
+	
+	robot->MoveToJoint(7, BATH);
+	
+	robot->MoveTo(BATH_X, BATH_Y, BATH_Z, 180, 0, 90);
+	robot->MoveTo(BATH_X, BATH_Y, BATH_Z-200, 180, 0, 90);
+	robot->MoveTo(BATH_X+150, BATH_Y, BATH_Z-200, 180, 0, 90); 
+	robot->MoveTo(BATH_X-150, BATH_Y, BATH_Z-200, 180, 0, 90); 
+	robot->MoveTo(BATH_X, BATH_Y, BATH_Z, 180, 0, 90); 
+	
+	// сушить
+	robot->SetJointPos(5, -30); // !
+	robot->SetJointPos(7, 8000); // !
+	robot->MoveToJoints();
+	
+	robot->MoveToJoint(6, -270); 
+	robot->MoveToJoint(6, 270);
+	
+	robot->defPos(0);
+	
+}
+
+function robot_robodk::ToStan(Robot, STAN_ID, TaskID) { 
+
+	if (STAN_ID == STAN_1_ID) {
+	
+ 		robot->MoveToJoint(7, STAN_1);
+	 		
+		robot->MoveTo(STAN_1_X, STAN_1_Y, STAN_1_Z, 90, 90, 180);
+		robot->MoveTo(STAN_1_X, STAN_1_Y+250, STAN_1_Z, 90, 90, 180);
+		system.sleep(1000);
+		robot->MoveTo(STAN_1_X, STAN_1_Y, STAN_1_Z, 90, 90, 180);
+			
+	}
+	
+	if (STAN_ID == STAN_2_ID) {
+		
+		robot->MoveToJoint(7, STAN_2);
+		
+		robot->MoveTo(STAN_2_X, STAN_2_Y, STAN_2_Z, 180, 0, 270);
+		robot->MoveTo(STAN_2_X, STAN_2_Y, STAN_2_Z-400, 180, 0, 270);
+		system.sleep(1000);
+		robot->MoveTo(STAN_2_X, STAN_2_Y, STAN_2_Z, 180, 0, 270);
+		
+	}
+	
+	if (STAN_ID == METER_ID) {
+		robot->MoveToJoint(7, METER);
+
+		robot->MoveTo(METER_X, METER_Y, METER_Z, 90, 0, -180);
+		robot->MoveTo(METER_X, METER_Y+700, METER_Z, 90, 0, -180);
+		system.sleep(1000);
+		robot->MoveTo(METER_X, METER_Y, METER_Z, 90, 0, -180);
+	
+	}
+	
+	robot->defPos(0);
+	
+}
+
+function StanWork(STAN_ID, TaskID) {
+	
+	if (STAN_ID == STAN_1_ID) {
+		Stan1 = array.get(ROBOTS_ARRAY, STAN_1_ID);
+		@S1 = robot_robodk_stan_1;
+		
+		dashboard.SetRobotBusy(Stan1, TaskID);
+		@S1->SetColor(255/255, 85/255, 0/255, 1);
+		system.sleep(10000);
+		@S1->SetColor(255/255, 255/255, 0/255, 1); //YELLOW
+		dashboard.SetRobotFree(Stan1);
+	}
+	
+	if (STAN_ID == STAN_2_ID) {
+		Stan2 = array.get(ROBOTS_ARRAY, STAN_2_ID);
+		@S2 = robot_robodk_stan_2;
+		
+		dashboard.SetRobotBusy(Stan2, TaskID);
+		@S2->SetColor(0/255, 85/255, 255/255, 1);
+		system.sleep(100000);
+		@S2->SetColor(0/255, 255/255, 255/255, 1); //BLUE
+		dashboard.SetRobotFree(Stan2); 
+	}
+	
+	if (STAN_ID == METER_ID) {
+		Meter = array.get(ROBOTS_ARRAY, METER_ID);
+		@S3 = robot_robodk_stan_3;
+		
+		dashboard.SetRobotBusy(Meter, TaskID);
+		@S3->SetColor(0/255, 85/255, 0/255, 1);
+		system.sleep(140000);
+		@S3->SetColor(0/255, 255/255, 0/255, 1); //GREEN
+		dashboard.SetRobotFree(Meter); 
+	}
+}
+
+function robot_robodk::p1(Robot, TaskID) {
+
+	dashboard.SetRobotBusy(Robot, TaskID);
+		
+	dashboard.SetTaskStatus(TaskID, 1);
+	dashboard.SetTaskProgerss(TaskID, 0);
+	
+	robot->GetDetail();
+	robot->Change(0);
+	robot->CheckCode();
+	
+	dashboard.SetTaskProgerss(TaskID, 15);
+	
+	robot->ToStan(Robot, STAN_1_ID, TaskID);
+	
+	dashboard.SetRobotFree(Robot);
+}
+
+function robot_robodk::p2(Robot, TaskID) {
+
+	dashboard.SetRobotBusy(Robot, TaskID);
+		
+	robot->ToStan(Robot, STAN_1_ID, TaskID);
+	
+	robot->TakeBath();
+	robot->Change(1);
+	dashboard.SetTaskProgerss(TaskID, 40);
+		
+	robot->ToStan(Robot,STAN_1_ID, TaskID);
+		
+	dashboard.SetRobotFree(Robot);
+}
+
+function robot_robodk::p3(Robot, STAN_ID, TaskID) {
+	
+	robot->ToStan(Robot, STAN_ID, TaskID);
+	robot->TakeBath();
+
+}
+
+	
+function temp(TaskID, i) {
+	
+	system.set("priority", i);
+	
+	Robot = array.get(ROBOTS_ARRAY, ROBOT_ID);
+	
+	robot_robodk->defPos(0);
+
+	system.mutex_lock("M_1");
+		robot_robodk->p1(Robot, TaskID);
+	
+		StanWork(STAN_1_ID, TaskID);
+		dashboard.SetTaskProgerss(TaskID, 30);
+	
+		robot_robodk->p2(Robot, TaskID);
+	
+		StanWork(STAN_1_ID, TaskID);
+		dashboard.SetTaskProgerss(TaskID, 55);
+	
+		loop {
+			flag_1 = array.get(FLAGS_ARRAY, FLAG_1);
+			//system.echo("flag1",flag_1);
+			if (flag_1 == 1) {
+				break;
+			}
+			if (flag_1 == 0) {
+				system.sleep(1000);
+			}
+		}
+		
+		robot_robodk->p3(Robot, STAN_1_ID, TaskID);
+	system.mutex_unlock("M_1");
+	
+	system.mutex_lock("M_2");
+		robot_robodk->ToStan(Robot, STAN_2_ID, TaskID);
+		dashboard.SetRobotFree(Robot);
+	
+		array.set(FLAGS_ARRAY, FLAG_1, 0);
+	
+		StanWork(STAN_2_ID, TaskID);
+		dashboard.SetTaskProgerss(TaskID, 80);
+	
+		loop {
+			flag_2 = array.get(FLAGS_ARRAY, FLAG_2);
+			//system.echo("flag2",flag_2);
+			if (flag_2 == 1) {
+				break;
+			}
+			if (flag_2 == 0) {
+				system.sleep(1000);
+			}
+		}
+	
+		robot_robodk->p3(Robot, STAN_2_ID, TaskID);
+		
+		array.set(FLAGS_ARRAY, FLAG_1, 1);
+		
+	system.mutex_unlock("M_2");	
+		
+	system.mutex_lock("M_3");
+		robot_robodk->ToStan(Robot, METER_ID, TaskID);
+		dashboard.SetRobotFree(Robot);
+	
+		array.set(FLAGS_ARRAY, FLAG_2, 0);
+	
+		StanWork(METER_ID, TaskID);
+		dashboard.SetTaskProgerss(TaskID, 95);
+	
+		robot_robodk->ToStan(Robot, METER_ID, TaskID);
+	
+		robot_robodk->Change(1);
+		robot_robodk->GetDetail();
+	
+		array.set(FLAGS_ARRAY, FLAG_2, 1);
+		
+		dashboard.SetTaskProgerss(TaskID, 100);
+		dashboard.SetTaskStatus(TaskID, 2);
+		
+		dashboard.SetRobotFree(Robot); 
+	system.mutex_unlock("M_3");
+		
+}
+
+function DoDetail() {	
+
+	i = 1000;
+	
+	TaskTypeID = array.get(TASKS_ARRAY, TASK_ID_DO);
+
+	loop {
+		
+		TaskID = dashboard.AddTask("", TaskTypeID, 1);
+		
+		if(IsExit()) {
+			break;
+		}
+		
+		i = i - 1;
+		
+		~temp(TaskID,i);
+
+	}
+}
+
+function main() {
+	
+	Init();
+	
+	//@R = robot_robodk;
+	Robot = dashboard.AddRobot("Robot");
+	array.set(ROBOTS_ARRAY, ROBOT_ID, Robot);
+	dashboard.SetRobotConnectionStatus(Robot, 2);
+	
+	Stan1 = dashboard.AddRobot("Stanok_1");
+	array.set(ROBOTS_ARRAY, STAN_1_ID, Stan1);
+	dashboard.SetRobotConnectionStatus(Stan1, 2);
+	
+ 	Stan2 = dashboard.AddRobot("Stanok_2");
+	array.set(ROBOTS_ARRAY, STAN_2_ID, Stan2);
+	dashboard.SetRobotConnectionStatus(Stan2, 2);  
+
+	Meter = dashboard.AddRobot("Meter");
+	array.set(ROBOTS_ARRAY, METER_ID, Meter);
+	dashboard.SetRobotConnectionStatus(Meter, 2);   
+
+	~robot_robodk->defPos(1);
+	
+	dashboard.CreateTaskType("doDetail", 0, 0);
+	array.set(TASKS_ARRAY, TASK_ID_DO, dashboard.RegisterTask("doDetail", 0, 0));
+	~DoDetail();
+	
+	TaskStopID = dashboard.AddTask("", dashboard.RegisterTask("Stop", 0, 0), 1);
+	dashboard.SetTaskStatus(TaskStopID, 1);
+	SetExit(1);
+	dashboard.SetTaskProgerss(TaskStopID, 100);	
+	dashboard.SetTaskStatus(TaskStopID, 2);	
+	
+}
